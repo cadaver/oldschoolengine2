@@ -10,6 +10,7 @@ Features:
 - CPU emulation based on EMU6502 code by Yve Verstrepen
 - Parts of SID emulation (noise, filter) based on jsSID by Mihaly Horvath
 - Line-based VIC-II rendering
+- Raster interrupts. No actual CIA chip emulation
 - Joystick port 2 control with arrows + ctrl as fire button
 - Keyboard input of most C64 keys
 - Virtual joystick on touch enabled devices (left side = direction, right side = fire)
