@@ -102,7 +102,6 @@ public class DiskImage {
 
     public FileHandle OpenFileForWrite(byte[] fileName)
     {
-        // Check if file was modified in user's save data
         try
         {
             BinaryWriter writer = new BinaryWriter(File.Open(GetSaveFileName(fileName), FileMode.Create));
