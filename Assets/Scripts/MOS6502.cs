@@ -629,14 +629,15 @@ namespace EMU6502
                 Push((byte)(_status & 0xEF)); // Mask off break flag
                 _interrupt = true;
                 _pc = _ram.Read16(0xFFFE);
-                CountCycle(7);
+                // HACK for MW4 scorepanel: do not waste cycles before IRQ
+                //CountCycle(7);
                 _irq = false;
                 return;
             }
 
             _opcode = _ram.Read(_pc);
 
-            // Hack: do not care of banking to simplify $01 handling for ingame IRQs
+            // HACK: do not care of banking to simplify $01 handling for ingame IRQs
             // There is no game code in $ff00 - $ffff region
             if (_pc >= 0xff00 && kernalTrap != null)
             {
