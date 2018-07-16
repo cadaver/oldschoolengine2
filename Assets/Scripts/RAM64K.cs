@@ -121,9 +121,10 @@ namespace EMU6502
         {
             if (address >= 0xd000 && address < 0xe000)
             {
-                _ioRam[address - 0xd000] = value;
+                // Hook before the value changes
                 if (ioWrite != null)
                     ioWrite(address);
+                _ioRam[address - 0xd000] = value;
             }
             else
                 _ram[address] = value;

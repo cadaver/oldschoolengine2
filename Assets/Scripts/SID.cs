@@ -137,14 +137,18 @@ public class SIDChannel
             noiseGenerator = 0x7ffff8;
         }
 
-        if ((lastAccumulator & 0x80000) == 0 && (accumulator & 0x80000) != 0)
+        // Optimization: run noise generator only when necessary
+        if ((waveform & 0x80) != 0)
         {
-            uint temp = noiseGenerator;
-            uint step = (temp & 0x400000) ^ ((temp & 0x20000) << 5);
-            temp <<= 1;
-            if (step > 0)
-                temp |= 1;
-            noiseGenerator = temp & 0x7fffff;
+            if ((lastAccumulator & 0x80000) == 0 && (accumulator & 0x80000) != 0)
+            {
+                uint temp = noiseGenerator;
+                uint step = (temp & 0x400000) ^ ((temp & 0x20000) << 5);
+                temp <<= 1;
+                if (step > 0)
+                    temp |= 1;
+                noiseGenerator = temp & 0x7fffff;
+            }
         }
 
         doSync = ((lastAccumulator & 0x800000) == 0 && (accumulator & 0x800000) != 0);
@@ -246,9 +250,11 @@ public class SID
 
     public void BufferSamples(int cpuCycles)
     {
-        // If amount of buffered samples is large, reduce amount of cycles to render
-        if (samples.Count > 2048 && cpuCycles > VIC2.CYCLES_PER_LINE)
-            cpuCycles = (int)(0.98f * cpuCycles);
+        // Adjust amount of cycles to render based on buffer fill
+        float multiplier = 1f + (2048 - samples.Count) / 16384f;
+        if (cpuCycles <= VIC2.CYCLES_PER_LINE && multiplier < 1f)
+            multiplier = 1f;
+        cpuCycles = (int)(multiplier * cpuCycles);
 
         for (int i = 0; i < 3; ++i)
         {
@@ -263,6 +269,7 @@ public class SID
         float masterVol = (_ram.ReadIO(0xd418) & 0xf) / 22.5f;
         byte filterSelect = (byte)(_ram.ReadIO(0xd418) & 0x70);
         byte filterCtrl = _ram.ReadIO(0xd417);
+        filterCtrl = 0;
 
         // Filter cutoff & resonance
         // Adjusted to be slightly darker than jsSID
@@ -279,7 +286,7 @@ public class SID
             for (int j = 0; j < 3; ++j)
             {
                 if (_channels[j].doSync && (_channels[j].syncTarget.waveform & 0x2) != 0)
-                    _channels[j].ResetAccumulator();
+                    _channels[j].syncTarget.ResetAccumulator();
             }
         
             ++_cycleAccumulator;

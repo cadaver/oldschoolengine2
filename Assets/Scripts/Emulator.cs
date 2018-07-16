@@ -26,7 +26,7 @@ using UnityEngine;
 using EMU6502;
 
 public class Emulator : MonoBehaviour {
-    
+
     public const string diskImageName = "steelrangerdemo";
 
     public SpriteRenderer screenRect;
@@ -42,6 +42,7 @@ public class Emulator : MonoBehaviour {
     Texture2D _screenTexture;
     bool _textureDirty;
     int _audioCycles;
+    bool _underRun;
 
     DiskImage _disk;
     byte[] _fileName;
@@ -118,6 +119,12 @@ public class Emulator : MonoBehaviour {
             _textureDirty = false;
         }
 
+        if (_underRun)
+        {
+            Debug.LogWarning("Audio underrun!");
+            _underRun = false;
+        }
+
         #if UNITY_ANDROID
         if (Input.GetKeyDown(KeyCode.Escape)) 
             Application.Quit();
@@ -151,7 +158,7 @@ public class Emulator : MonoBehaviour {
 
         _textureDirty = true;
 
-        Debug.Log(_sid.samples.Count);
+        //Debug.Log(_sid.samples.Count);
     }
 
     void OnAudioFilterRead(float[] data, int channels)
@@ -161,8 +168,12 @@ public class Emulator : MonoBehaviour {
             int j = 0;
             for (int i = 0; i < data.Length; ++i)
             {
+                if (j >= _sid.samples.Count)
+                    _underRun = true;
+
                 if (j < _sid.samples.Count && (i % channels == 0))
                     _lastSidSample = _sid.samples[j++];
+                
 
                 data[i] = _lastSidSample;
             }
@@ -200,7 +211,7 @@ public class Emulator : MonoBehaviour {
 
     void HandleIOWrite(ushort address)
     {
-        // Render audio up to the current point after each SID write
+        // Render audio up to the current point on each SID write
         if (address >= 0xd400 && address <= 0xd418)
         {
             _sid.BufferSamples(_processor.Cycles - _audioCycles);
@@ -264,7 +275,7 @@ public class Emulator : MonoBehaviour {
             _fileHandle = _disk.OpenFile(_fileName);
             if (_fileHandle == null)
             {
-                Debug.LogError("File " + _fileName[0].ToString("X") + " " + _fileName[1].ToString("X") + " not found");
+                Debug.LogWarning("File " + _fileName[0].ToString("X") + " " + _fileName[1].ToString("X") + " not found");
             }
         }
         // CHRIN
@@ -287,7 +298,7 @@ public class Emulator : MonoBehaviour {
             _fileHandle = _disk.OpenFileForWrite(_fileName);
             if (_fileHandle == null)
             {
-                Debug.LogError("File " + _fileName[0].ToString("X") + " " + _fileName[1].ToString("X") + " failed to open for read");
+                Debug.LogError("File " + _fileName[0].ToString("X") + " " + _fileName[1].ToString("X") + " failed to open for write");
             }
         }
         // CHROUT
