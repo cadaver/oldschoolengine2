@@ -41,6 +41,7 @@ public class Emulator : MonoBehaviour {
 
     Texture2D _screenTexture;
     bool _textureDirty;
+    int _audioCycles;
 
     DiskImage _disk;
     byte[] _fileName;
@@ -52,7 +53,8 @@ public class Emulator : MonoBehaviour {
     {
         _screenTexture = new Texture2D(320, 200, TextureFormat.RGB24, false);
         _ram = new RAM64K();
-        _ram.readIOInput += HandleIORead;
+        _ram.ioRead += HandleIORead;
+        _ram.ioWrite += HandleIOWrite;
         _processor = new MOS6502(_ram);
         _processor.kernalTrap += HandleKernalTrap;
         _vic2 = new VIC2(_screenTexture, _ram);
@@ -124,7 +126,10 @@ public class Emulator : MonoBehaviour {
 
     void FixedUpdate()
     {
+        const int frameCycles = VIC2.CYCLES_PER_LINE * VIC2.NUM_LINES;
+
         _processor.Cycles = 0;
+        _audioCycles = 0;
 
         for (ushort i = 0; i < VIC2.FIRST_VISIBLE_LINE; ++i)
             ExecuteLine(i, false);
@@ -137,7 +142,16 @@ public class Emulator : MonoBehaviour {
         for (ushort i = VIC2.FIRST_INVISIBLE_LINE; i < VIC2.NUM_LINES; ++i)
             ExecuteLine(i, false);
 
+        // Render rest of audio until end of frame
+        if (_audioCycles < frameCycles)
+        {
+            _sid.BufferSamples(frameCycles - _audioCycles);
+            _audioCycles = frameCycles;
+        }
+
         _textureDirty = true;
+
+        Debug.Log(_sid.samples.Count);
     }
 
     void OnAudioFilterRead(float[] data, int channels)
@@ -161,20 +175,13 @@ public class Emulator : MonoBehaviour {
     {
         UpdateLineCounterAndIRQ(lineNum);
 
-        ulong targetCycles = 63 * (ulong)lineNum;
+        int targetCycles = VIC2.CYCLES_PER_LINE * lineNum;
 
         while (_processor.Cycles < targetCycles && !_processor.Jam)
             _processor.Process();
 
         if (visible)
             _vic2.RenderNextLine();
-
-        // If samples building up, render one cycle less on each second line
-        int sampleNum = 63;
-        if (_sid.samples.Count > 2048 && (lineNum & 1) != 0)
-            --sampleNum;
-
-        _sid.BufferSamples(sampleNum);
     }
 
     void UpdateLineCounterAndIRQ(ushort lineNum)
@@ -188,6 +195,16 @@ public class Emulator : MonoBehaviour {
                 //Debug.Log("Raster IRQ at " + lineNum);
                 _processor.SetIRQ();
             }
+        }
+    }
+
+    void HandleIOWrite(ushort address)
+    {
+        // Render audio up to the current point after each SID write
+        if (address >= 0xd400 && address <= 0xd418)
+        {
+            _sid.BufferSamples(_processor.Cycles - _audioCycles);
+            _audioCycles = _processor.Cycles;
         }
     }
 

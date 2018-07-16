@@ -30,6 +30,7 @@ public class VIC2 {
     public const int NUM_LINES = 312;
     public const int FIRST_VISIBLE_LINE = 50;
     public const int FIRST_INVISIBLE_LINE = 250;
+    public const int CYCLES_PER_LINE = 63;
     static public readonly byte[] bitValues = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80 };
 
     // Pepto palette

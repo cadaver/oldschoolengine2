@@ -44,7 +44,6 @@ public class SIDChannel
 
     public ushort frequency;
     public byte ad;
-    public byte lastGateoffAd;
     public byte sr;
     public ushort pulse;
     public byte waveform;
@@ -69,13 +68,7 @@ public class SIDChannel
         if ((waveform & 0x1) != 0)
         {
             if (state == ADSRState.Release)
-            {
                 state = ADSRState.Attack;
-                // HACK: differentiate between the music & sound FX hard restart used in Hessian / Steel Ranger,
-                // as we don't have cycle-accurate writes
-                if (lastGateoffAd != 0)
-                    adsrCounter = 9;
-            }
         }
         else
             state = ADSRState.Release;
@@ -253,14 +246,16 @@ public class SID
 
     public void BufferSamples(int cpuCycles)
     {
+        // If amount of buffered samples is large, reduce amount of cycles to render
+        if (samples.Count > 2048 && cpuCycles > VIC2.CYCLES_PER_LINE)
+            cpuCycles = (int)(0.98f * cpuCycles);
+
         for (int i = 0; i < 3; ++i)
         {
             ushort ioBase = (ushort)(0xd400 + i * 7);
             _channels[i].frequency = (ushort)(_ram.ReadIO(ioBase) | (_ram.ReadIO((ushort)(ioBase + 1)) << 8));
             _channels[i].pulse = (ushort)(_ram.ReadIO((ushort)(ioBase + 2)) | (_ram.ReadIO((ushort)(ioBase + 3)) << 8));
             _channels[i].waveform = _ram.ReadIO((ushort)(ioBase + 4));
-            if ((_channels[i].waveform & 0x1) == 0)
-                _channels[i].lastGateoffAd = _channels[i].ad;
             _channels[i].ad = _ram.ReadIO((ushort)(ioBase + 5));
             _channels[i].sr = _ram.ReadIO((ushort)(ioBase + 6));
         }

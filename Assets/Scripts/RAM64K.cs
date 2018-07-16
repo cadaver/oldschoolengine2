@@ -33,8 +33,10 @@ namespace EMU6502
         readonly byte[] _ram;
         readonly byte[] _ioRam;
 
-        public delegate byte ReadIOInput(ushort address, out bool handled);
-        public event ReadIOInput readIOInput;
+        public delegate byte IORead(ushort address, out bool handled);
+        public delegate void IOWrite(ushort address);
+        public event IORead ioRead;
+        public event IOWrite ioWrite;
 
         //TODO: Buffer objects, shadowing etc, accept byte[] for pieces of memory and make them toggleable
 
@@ -72,10 +74,10 @@ namespace EMU6502
         {
             if (address >= 0xd000 && address < 0xe000)
             {
-                if (readInput && readIOInput != null)
+                if (readInput && ioRead != null)
                 {
                     bool handled = false;
-                    byte ret = readIOInput(address, out handled);
+                    byte ret = ioRead(address, out handled);
                     if (handled)
                         return ret;
                 }
@@ -118,7 +120,11 @@ namespace EMU6502
         public virtual void WriteIO(ushort address, byte value)
         {
             if (address >= 0xd000 && address < 0xe000)
+            {
                 _ioRam[address - 0xd000] = value;
+                if (ioWrite != null)
+                    ioWrite(address);
+            }
             else
                 _ram[address] = value;
         }

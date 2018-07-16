@@ -160,11 +160,11 @@ namespace EMU6502
         /// </summary>
         public bool Jam { get { return _jam; } }
 
-        ulong _cycles;
+        int _cycles;
         /// <summary>
         /// Cycle counter. Returns the amount of cycles since the last reset.
         /// </summary>
-        public ulong Cycles { get { return _cycles; } set { _cycles = value; } }
+        public int Cycles { get { return _cycles; } set { _cycles = value; } }
 
 #if EVENT
         /// <summary>
@@ -191,7 +191,7 @@ namespace EMU6502
 
 
 
-        void CountCycle(uint cycles = 1)
+        void CountCycle(int cycles = 1)
         {
 #if EVENT
             if (Cycle != null)
