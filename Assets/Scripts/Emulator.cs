@@ -38,6 +38,9 @@ public class Emulator : MonoBehaviour {
     SID _sid;
 
     int _lineCounter;
+    int _timer;
+    bool _timerIRQEnable;
+    bool _timerIRQFlag;
 
     Texture2D _screenTexture;
     bool _textureDirty;
@@ -200,24 +203,46 @@ public class Emulator : MonoBehaviour {
     void UpdateLineCounterAndIRQ(int lineNum)
     {
         _lineCounter = lineNum;
-        if ((_ram.ReadIO(0xd01a) & 0x1) > 0)
+        if ((_ram.ReadIO(0xd01a, false) & 0x1) > 0)
         {
             int targetLineNum = (_ram.ReadIO(0xd011, false) & 0x80) * 2 + _ram.ReadIO(0xd012, false);
             if (_lineCounter == targetLineNum)
-            {
-                //Debug.Log("Raster IRQ at " + lineNum);
                 _processor.SetIRQ();
+        }
+        if (_timer > 0 && (_ram.ReadIO(0xdc0e, false) & 0x1) > 0)
+        {
+            _timer -= VIC2.CYCLES_PER_LINE;
+            if (_timer <= 0)
+            {
+                _timer = 0;
+                if (_timerIRQEnable)
+                {
+                    _timerIRQFlag = true;
+                    _processor.SetIRQ();
+                }
             }
         }
     }
 
-    void HandleIOWrite(ushort address)
+    void HandleIOWrite(ushort address, byte value)
     {
         // Render audio up to the current point on each SID write
         if (address >= 0xd400 && address <= 0xd418)
         {
             _sid.BufferSamples(_processor.Cycles - _audioCycles);
             _audioCycles = _processor.Cycles;
+        }
+        if (address == 0xdc0d)
+        {
+            if ((value & 0x81) == 0x81)
+                _timerIRQEnable = true;
+            if ((value & 0x81) == 0x1)
+                _timerIRQEnable = false;
+        }
+        if (address == 0xdc0e)
+        {
+            if ((value & 0x10) > 0)
+                _timer = _ram.ReadIO(0xdc04, false) | (_ram.ReadIO(0xdc05, false) << 8);
         }
     }
 
@@ -251,6 +276,19 @@ public class Emulator : MonoBehaviour {
         {
             handled = true;
             return (byte)(_lineCounter & 0xff);
+        }
+        else if (address == 0xdc0d)
+        {
+            handled = true;
+            byte ret = 0x0;
+            if (_timerIRQEnable) 
+                ret |= 0x1;
+            if (_timerIRQFlag)
+            {
+                _timerIRQFlag = false;
+                ret |= 0x80;
+            }
+            return ret;
         }
         else
         {

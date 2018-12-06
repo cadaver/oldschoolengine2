@@ -34,7 +34,7 @@ namespace EMU6502
         readonly byte[] _ioRam;
 
         public delegate byte IORead(ushort address, out bool handled);
-        public delegate void IOWrite(ushort address);
+        public delegate void IOWrite(ushort address, byte value);
         public event IORead ioRead;
         public event IOWrite ioWrite;
 
@@ -93,8 +93,6 @@ namespace EMU6502
             byte a = Read(address);
             byte b = Read(++address);
             return (ushort)((b << 8) | a);
-            // Let's keep things readable shall we
-            //return (ushort)((Read(++address) << 8) | Read(--address));
         }
         public virtual void Read(ushort address, byte[] buffer, int size = 0)
         {
@@ -123,7 +121,7 @@ namespace EMU6502
             {
                 // Hook before the value changes
                 if (ioWrite != null)
-                    ioWrite(address);
+                    ioWrite(address, value);
                 _ioRam[address - 0xd000] = value;
             }
             else
