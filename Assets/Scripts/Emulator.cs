@@ -179,7 +179,6 @@ public class Emulator : MonoBehaviour {
                 if (j < _sid.samples.Count && (i % channels == 0))
                     _lastSidSample = _sid.samples[j++];
                 
-
                 data[i] = _lastSidSample;
             }
 

@@ -251,8 +251,9 @@ public class SID
     public void BufferSamples(int cpuCycles)
     {
         // Adjust amount of cycles to render based on buffer fill
-        float multiplier = 1f + (2048 - samples.Count) / 16384f;
-        if (cpuCycles <= VIC2.CYCLES_PER_LINE && multiplier < 1f)
+        float multiplier = 1f + (2048 - samples.Count) / 8192f;
+        // Let multiplier remain at 1 when we're executing the playroutine, to make sure ADSR behavior is accurate
+        if (cpuCycles <= VIC2.CYCLES_PER_LINE*2)
             multiplier = 1f;
         cpuCycles = (int)(multiplier * cpuCycles);
 
