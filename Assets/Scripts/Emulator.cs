@@ -255,16 +255,13 @@ public class Emulator : MonoBehaviour {
         else if (address == 0xdc01)
         {
             handled = true;
-            int matrixRow = -1;
+            byte ret = 0xff;
             for (int i = 0; i < 8; ++i)
             {
                 if ((_ram.ReadIO(0xdc00, false) & VIC2.bitValues[i]) == 0)
-                {
-                    matrixRow = i;
-                    break;
-                }
+                    ret &= controls.keyMatrix[i];
             }
-            return (byte)(matrixRow >= 0 ? controls.keyMatrix[matrixRow] : 0xff);
+            return ret;
         }
         else if (address == 0xd011)
         {

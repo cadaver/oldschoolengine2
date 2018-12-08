@@ -94,6 +94,7 @@ namespace EMU6502
             byte b = Read(++address);
             return (ushort)((b << 8) | a);
         }
+
         public virtual void Read(ushort address, byte[] buffer, int size = 0)
         {
             if (size == 0)

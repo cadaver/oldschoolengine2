@@ -250,6 +250,9 @@ public class SID
 
     public void BufferSamples(int cpuCycles)
     {
+        if (cpuCycles == 0)
+            return;
+
         // Adjust amount of cycles to render based on buffer fill
         float multiplier = 1f + (1764 - samples.Count) / 8192f;
         // Let multiplier remain at 1 when we're executing the playroutine, to make sure ADSR behavior is accurate
@@ -270,7 +273,6 @@ public class SID
         float masterVol = (_ram.ReadIO(0xd418) & 0xf) / 22.5f;
         byte filterSelect = (byte)(_ram.ReadIO(0xd418) & 0x70);
         byte filterCtrl = _ram.ReadIO(0xd417);
-        filterCtrl = 0;
 
         // Filter cutoff & resonance
         // Adjusted to be slightly darker than jsSID
