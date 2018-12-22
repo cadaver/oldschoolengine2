@@ -28,11 +28,13 @@ public struct KeyMapping
 {
     public KeyCode keyCode;
     public byte matrixSlot;
+    public string axis;
 
-    public KeyMapping(KeyCode code, byte slot)
+    public KeyMapping(KeyCode code, byte slot, string axisName = "")
     {
         keyCode = code;
         matrixSlot = slot;
+        axis = axisName;
     }
 }
 
@@ -88,10 +90,10 @@ public class Controls : MonoBehaviour {
         new KeyMapping(KeyCode.P, 41),
         new KeyMapping(KeyCode.L, 42),
         new KeyMapping(KeyCode.Minus, 43),
-        new KeyMapping(KeyCode.Period, 44),
+        new KeyMapping(KeyCode.Period, 44, "SelectR"),
         new KeyMapping(KeyCode.Colon, 45),
         new KeyMapping(KeyCode.At, 46),
-        new KeyMapping(KeyCode.Comma, 47),
+        new KeyMapping(KeyCode.Comma, 47, "SelectL"),
         new KeyMapping(KeyCode.Asterisk, 49),
         new KeyMapping(KeyCode.Semicolon, 50),
         new KeyMapping(KeyCode.Home, 51),
@@ -102,7 +104,7 @@ public class Controls : MonoBehaviour {
         new KeyMapping(KeyCode.Alpha2, 59),
         new KeyMapping(KeyCode.Space, 60),
         new KeyMapping(KeyCode.Q, 62),
-        new KeyMapping(KeyCode.Escape, 63)
+        new KeyMapping(KeyCode.Escape, 63, "Start")
     };
 
     int _joystickFingerId = -1;
@@ -111,12 +113,14 @@ public class Controls : MonoBehaviour {
     public void UpdateJoystick()
     {
         joystick = 0x0;
-        if (Input.GetKey(KeyCode.UpArrow)) joystick |= 0x1;
-        if (Input.GetKey(KeyCode.DownArrow)) joystick |= 0x2;
-        if (Input.GetKey(KeyCode.LeftArrow)) joystick |= 0x4;
-        if (Input.GetKey(KeyCode.RightArrow)) joystick |= 0x8;
-        if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
-            joystick |= 0x10;
+        float h = Input.GetAxis("Horizontal");
+        float v = Input.GetAxis("Vertical");
+        bool fire = Input.GetButton("Fire1");
+        if (v > 0f) joystick |= 0x1;
+        if (v < 0f) joystick |= 0x2;
+        if (h < 0f) joystick |= 0x4;
+        if (h > 0f) joystick |= 0x8;
+        if (fire) joystick |= 0x10;
 
         bool hasJoystickTouch = false;
         fireButton.gameObject.SetActive(false);
@@ -182,7 +186,7 @@ public class Controls : MonoBehaviour {
 
         foreach (KeyMapping mapping in keyMappings)
         {
-            if (Input.GetKey(mapping.keyCode))
+            if (Input.GetKey(mapping.keyCode) || mapping.axis.Length > 0 && Input.GetAxis(mapping.axis) > 0f)
                 keyMatrix[mapping.matrixSlot >> 3] &= (byte)(~VIC2.bitValues[mapping.matrixSlot & 0x7]);
         }
     }
