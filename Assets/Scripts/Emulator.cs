@@ -25,8 +25,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using EMU6502;
 
-public class Emulator : MonoBehaviour {
-
+public class Emulator : MonoBehaviour 
+{
     public const string diskImageName = "steelrangerdemo";
 
     public SpriteRenderer screenRect;
@@ -273,11 +273,16 @@ public class Emulator : MonoBehaviour {
             handled = true;
             return (byte)(_lineCounter & 0xff);
         }
+        else if (address == 0xd01a)
+        {
+            handled = true;
+            return (byte)(_ram.ReadIO(0xd01a, false) | 0xf0);
+        }
         else if (address == 0xdc0d)
         {
             handled = true;
             byte ret = 0x0;
-            if (_timerIRQEnable) 
+            if (_timerIRQEnable)
                 ret |= 0x1;
             if (_timerIRQFlag)
             {
