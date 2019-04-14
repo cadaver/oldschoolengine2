@@ -1,6 +1,6 @@
 ﻿// MIT License
 // 
-// Copyright (c) 2018 Lasse Oorni
+// Copyright (c) 2018-2019 Lasse Oorni
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -98,6 +98,11 @@ public class Emulator : MonoBehaviour
             ushort address = loadAddress;
             while (bootFile.Open)
                 _ram[address++] = _disk.ReadByte(bootFile);
+            // Set end address on zero page
+            _ram[0x2d] = (byte)(address & 0xff);
+            _ram[0x2e] = (byte)(address >> 8);
+            _ram[0xae] = (byte)(address & 0xff);
+            _ram[0xaf] = (byte)(address >> 8);
             // Set RESET vector to CLALL (autostart), otherwise assume sys2061
             if (loadAddress <= 0x32c)
             {
@@ -304,10 +309,18 @@ public class Emulator : MonoBehaviour
         if (address == 0xffbd)
         {
             //Debug.Log("SetNam");
-            _fileName = new byte[_processor.A];
+            // Strip away @0:
+            byte fileNameLength = _processor.A;
             ushort fileNameAddress = (ushort)(_processor.Y * 256 + _processor.X);
+            if (_ram[fileNameAddress] == 0x40 && _ram[(ushort)(fileNameAddress + 1)] == 0x30)
+            {
+                fileNameAddress += 3;
+                fileNameLength -= 3;
+            }
+
+            _fileName = new byte[fileNameLength];                 
             for (int i = 0; i < _fileName.Length; ++i)
-                _fileName[i] = _ram[fileNameAddress++];
+                _fileName[i] = _ram[fileNameAddress++];  
         }
         // CHKIN (actually open the file stream)
         else if (address == 0xffc6)
