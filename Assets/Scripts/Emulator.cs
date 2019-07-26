@@ -64,8 +64,8 @@ public class Emulator : MonoBehaviour
         _vic2 = new VIC2(_screenTexture, _ram);
         _sid = new SID(_ram);
 
-        //_screenTexture.filterMode = FilterMode.Point;
         _screenTexture.wrapMode = TextureWrapMode.Clamp;
+        _screenTexture.filterMode = FilterMode.Point;
         screenRect.sprite = Sprite.Create(_screenTexture, new Rect(0, 0, _screenTexture.width, _screenTexture.height), new Vector2(0.5f, 0.5f));
         screenRect.material.SetTexture("_MainTex", _screenTexture);
         screenRect.transform.localScale = new Vector2(1f, -1f);
@@ -282,6 +282,11 @@ public class Emulator : MonoBehaviour
         {
             handled = true;
             return (byte)(_ram.ReadIO(0xd01a, false) | 0xf0);
+        }
+        else if (address == 0xd030)
+        {
+            handled = true;
+            return (byte)0xff;
         }
         else if (address == 0xdc0d)
         {
