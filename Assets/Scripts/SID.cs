@@ -178,13 +178,31 @@ public class SIDChannel
                 waveOutput = Pulse();
                 break;
             case 0x50:
-                waveOutput = Triangle() & Pulse();
+                {
+                    uint triangle = Triangle();
+                    uint pulse = Pulse();
+                    waveOutput = ((pulse & triangle & (triangle >> 1)) & (triangle << 1)) << 1;
+                    if (waveOutput > 0xffff)
+                        waveOutput = 0xffff;
+                }
                 break;
             case 0x60:
-                waveOutput = Sawtooth() & Pulse();
+                {
+                    uint saw = Sawtooth();
+                    uint pulse = Pulse();
+                    waveOutput = ((pulse & saw & (saw >> 1)) & (saw << 1)) << 1;
+                    if (waveOutput > 0xffff)
+                        waveOutput = 0xffff;
+                }
                 break;
             case 0x70:
-                waveOutput = Triangle() & Sawtooth() & Pulse();
+                {
+                    uint triSaw = Triangle() & Sawtooth();
+                    uint pulse = Pulse();
+                    waveOutput = ((pulse & triSaw & (triSaw >> 1)) & (triSaw << 1)) << 1;
+                    if (waveOutput > 0xffff)
+                        waveOutput = 0xffff;
+                }
                 break;
             case 0x80:
                 waveOutput = Noise();
