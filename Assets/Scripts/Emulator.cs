@@ -1,6 +1,6 @@
 ﻿// MIT License
 // 
-// Copyright (c) 2018-2019 Lasse Oorni
+// Copyright (c) 2018-2020 Lasse Oorni
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -41,6 +41,7 @@ public class Emulator : MonoBehaviour
     int _timer;
     bool _timerIRQEnable;
     bool _timerIRQFlag;
+    bool _rasterIRQFlag;
 
     Texture2D _screenTexture;
     bool _textureDirty;
@@ -198,7 +199,10 @@ public class Emulator : MonoBehaviour
         int targetCycles = VIC2.CYCLES_PER_LINE * lineNum;
 
         while (_processor.Cycles < targetCycles && !_processor.Jam)
+        {
+            _processor.SetIRQ(_timerIRQFlag || _rasterIRQFlag);
             _processor.Process();
+        }
 
         if (visible)
             _vic2.RenderNextLine();
@@ -211,7 +215,7 @@ public class Emulator : MonoBehaviour
         {
             int targetLineNum = (_ram.ReadIO(0xd011, false) & 0x80) * 2 + _ram.ReadIO(0xd012, false);
             if (_lineCounter == targetLineNum)
-                _processor.SetIRQ();
+                _rasterIRQFlag = true;
         }
         if (_timer > 0 && (_ram.ReadIO(0xdc0e, false) & 0x1) > 0)
         {
@@ -220,10 +224,7 @@ public class Emulator : MonoBehaviour
             {
                 _timer = 0;
                 if (_timerIRQEnable)
-                {
                     _timerIRQFlag = true;
-                    _processor.SetIRQ();
-                }
             }
         }
     }
@@ -236,17 +237,22 @@ public class Emulator : MonoBehaviour
             _sid.BufferSamples(_processor.Cycles - _audioCycles);
             _audioCycles = _processor.Cycles;
         }
-        if (address == 0xdc0d)
+        else if (address == 0xdc0d)
         {
             if ((value & 0x81) == 0x81)
                 _timerIRQEnable = true;
             if ((value & 0x81) == 0x1)
                 _timerIRQEnable = false;
         }
-        if (address == 0xdc0e)
+        else if (address == 0xdc0e)
         {
             if ((value & 0x10) > 0)
                 _timer = _ram.ReadIO(0xdc04, false) | (_ram.ReadIO(0xdc05, false) << 8);
+        }
+        else if (address == 0xd019)
+        {
+            // HACK: any write clears raster IRQ flag
+            _rasterIRQFlag = false;
         }
     }
 
@@ -323,9 +329,9 @@ public class Emulator : MonoBehaviour
                 fileNameLength -= 3;
             }
 
-            _fileName = new byte[fileNameLength];                 
+            _fileName = new byte[fileNameLength];
             for (int i = 0; i < _fileName.Length; ++i)
-                _fileName[i] = _ram[fileNameAddress++];  
+                _fileName[i] = _ram[fileNameAddress++];
         }
         // CHKIN (actually open the file stream)
         else if (address == 0xffc6)

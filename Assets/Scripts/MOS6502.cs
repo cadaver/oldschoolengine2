@@ -572,9 +572,9 @@ namespace EMU6502
             _nmi = true;
         }
 
-        public void SetIRQ()
+        public void SetIRQ(bool value)
         {
-            _irq = true;
+            _irq = value;
         }
 
         /// <summary>

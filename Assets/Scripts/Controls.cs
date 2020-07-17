@@ -1,6 +1,6 @@
 ﻿// MIT License
 // 
-// Copyright (c) 2018-2019 Lasse Oorni
+// Copyright (c) 2018-2020 Lasse Oorni
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -115,7 +115,7 @@ public class Controls : MonoBehaviour {
         joystick = 0x0;
         float h = Input.GetAxis("Horizontal");
         float v = Input.GetAxis("Vertical");
-        bool fire = Input.GetButton("Fire1");
+        bool fire = Input.GetButton("Fire1") || Input.GetButton("Fire2");
         if (v > 0f) joystick |= 0x1;
         if (v < 0f) joystick |= 0x2;
         if (h < 0f) joystick |= 0x4;
