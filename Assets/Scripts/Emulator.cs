@@ -66,7 +66,6 @@ public class Emulator : MonoBehaviour
         _sid = new SID(_ram);
 
         _screenTexture.wrapMode = TextureWrapMode.Clamp;
-        _screenTexture.filterMode = FilterMode.Point;
         screenRect.sprite = Sprite.Create(_screenTexture, new Rect(0, 0, _screenTexture.width, _screenTexture.height), new Vector2(0.5f, 0.5f));
         screenRect.material.SetTexture("_MainTex", _screenTexture);
         screenRect.transform.localScale = new Vector2(1f, -1f);

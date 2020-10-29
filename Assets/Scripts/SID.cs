@@ -134,7 +134,7 @@ public class SIDChannel
         if ((waveform & 0x8) != 0)
         {
             accumulator = 0;
-            noiseGenerator = 0x7ffff8;
+            //noiseGenerator = 0x7ffff8;
         }
 
         // Optimization: run noise generator only when necessary
