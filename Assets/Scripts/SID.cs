@@ -84,12 +84,14 @@ public class SIDChannel
             adsrCounter += (ushort)adsrCyclesNow;
             adsrCounter &= 0x7fff;
 
-            switch (state)
+            if (adsrCounter == adsrTarget)
             {
+                adsrCounter = 0;
+
+                switch (state)
+                {
                 case ADSRState.Attack:
-                    if (adsrCounter == adsrTarget)
                     {
-                        adsrCounter = 0;
                         adsrExpCounter = 0;
                         ++volumeLevel;
                         if (volumeLevel == 0xff)
@@ -98,9 +100,7 @@ public class SIDChannel
                     break;
 
                 case ADSRState.Decay:
-                    if (adsrCounter == adsrTarget)
                     {
-                        adsrCounter = 0;
                         byte adsrExpTarget = volumeLevel < 0x5d ? expTargetTable[volumeLevel] : (byte)1;
                         ++adsrExpCounter;
                         if (adsrExpCounter >= adsrExpTarget)
@@ -113,9 +113,7 @@ public class SIDChannel
                     break;
 
                 case ADSRState.Release:
-                    if (adsrCounter == adsrTarget)
                     {
-                        adsrCounter = 0;
                         if (volumeLevel > 0)
                         {
                             byte adsrExpTarget = volumeLevel < 0x5d ? expTargetTable[volumeLevel] : (byte)1;
@@ -128,6 +126,7 @@ public class SIDChannel
                         }
                     }
                     break;
+                }
             }
 
             adsrCycles -= adsrCyclesNow;
