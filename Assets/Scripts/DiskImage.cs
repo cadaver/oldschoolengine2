@@ -144,7 +144,7 @@ public class DiskImage {
             int offset = GetSectorOffset(dirTrack, dirSector);
             for (int d = 2; d < 256; d += 32)
             {
-                if (_data[offset + d] == 0x82)
+                if (_data[offset + d] == 0x82 || _data[offset + d] == 0xc2)
                 {
                     bool match = true;
 

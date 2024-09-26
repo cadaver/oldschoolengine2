@@ -628,14 +628,53 @@ namespace EMU6502
                 Push16(_pc);
                 Push((byte)(_status & 0xEF)); // Mask off break flag
                 _interrupt = true;
-                _pc = _ram.Read16(0xFFFE);
-                // HACK for MW4 scorepanel: do not waste cycles before IRQ
-                //CountCycle(7);
+
+                if ((_ram.Read(0x1) & 0x2) != 0x0) // If Kernal ROM on, use soft vector and push CPU registers 
+                {
+                    _pc = _ram.Read16(0x0314);
+                    Push(_a);
+                    Push(_x);
+                    Push(_y);
+                }
+                else
+                    _pc = _ram.Read16(0xFFFE);
+
                 _irq = false;
                 return;
             }
 
+            // HACK: if Kernal + Basic on, and code jumps to $a8bc, re-init SYS address from Basic program RAM beginning
+            if (_pc == 0xa8bc && (_ram.Read(0x1) & 0x3) == 0x3)
+            {
+                ushort address = 0x0801;
+                ushort sysAddress = 0;
+                // Scan for SYS address
+                while (address < 0xffff && (_ram[address] < 0x30 || _ram[address] > 0x39))
+                    ++address;
+                while (address < 0xffff && _ram[address] >= 0x30 && _ram[address] <= 0x39)
+                {
+                    sysAddress *= 10;
+                    sysAddress += (byte)(_ram[address] - 0x30);
+                    ++address;
+                }
+
+                _pc = sysAddress;
+
+                Debug.Log("Re-init SYS address (crude Basic emulation) to " + _pc);
+            }
+
             _opcode = _ram.Read(_pc);
+            _data = _ram.Read((ushort)(_pc + 1));
+            _address = Combine(_data, _ram.Read((ushort)(_pc + 2)));
+
+            // HACK: emulate $ea81 interrupt termination if Kernal on
+            if (_pc == 0xea81 && (_ram.Read(0x1) & 0x3) == 0x2)
+            {
+                _y = Pop();
+                _x = Pop();
+                _a = Pop();
+                _opcode = 0x40; // RTI
+            }
 
             // HACK: do not care of banking to simplify $01 handling for ingame IRQs
             // There is no game code in $ff00 - $ffff region
@@ -644,10 +683,7 @@ namespace EMU6502
                 kernalTrap(_pc);
                 _opcode = 0x60; // RTS, return from the Kernal routine
             }
-
-            _data = _ram.Read((ushort)(_pc + 1));
-            _address = Combine(_data, _ram.Read((ushort)(_pc + 2)));
-
+            
             switch (_opcode)
             {
                 // ADC
@@ -822,6 +858,8 @@ namespace EMU6502
                     
                 // BRK
                 case (0x00): // Implied
+                    if (_pc != 0)
+                        Debug.LogError("BRK caused at " + _pc);
                     _pc += 2;
 #if BUG
                     if (_irq || _nmi || _reset) break; // Emulate the interrupt bug

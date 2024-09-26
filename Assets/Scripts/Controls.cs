@@ -176,7 +176,7 @@ public class Controls : MonoBehaviour {
             joystickBase.gameObject.SetActive(false);
         }
 
-        joystick ^= 0xff;
+        joystick ^= 0x7f;
     }
 
     public void UpdateKeyboard()

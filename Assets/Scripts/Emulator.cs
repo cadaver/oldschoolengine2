@@ -89,12 +89,15 @@ public class Emulator : MonoBehaviour
     void BootGame()
     {
         _disk = new DiskImage(diskImageName);
+        Debug.Log("Opened disk " + diskImageName);
 
         // No filename, open first file in directory
         FileHandle bootFile = _disk.OpenFile(null);
         if (bootFile != null)
         {
+            Debug.Log("Opened boot file from track " + bootFile.track + " sector " + bootFile.sector);
             ushort loadAddress = (ushort)(_disk.ReadByte(bootFile) + _disk.ReadByte(bootFile) * 256);
+            loadAddress = 0x0801;
             ushort address = loadAddress;
             while (bootFile.Open)
                 _ram[address++] = _disk.ReadByte(bootFile);
@@ -103,18 +106,25 @@ public class Emulator : MonoBehaviour
             _ram[0x2e] = (byte)(address >> 8);
             _ram[0xae] = (byte)(address & 0xff);
             _ram[0xaf] = (byte)(address >> 8);
-            // Set RESET vector to CLALL (autostart), otherwise assume sys2061
-            if (loadAddress <= 0x32c)
+            ushort endAddress = address;
+
+            address = loadAddress;
+            ushort sysAddress = 0;
+            // Scan for SYS address
+            while (address < endAddress && (_ram[address] < 0x30 || _ram[address] > 0x39))
+                ++address;
+            while (address < endAddress && _ram[address] >= 0x30 && _ram[address] <= 0x39)
             {
-                _ram[0xfffc] = _ram[0x32c];
-                _ram[0xfffd] = _ram[0x32d];
+                sysAddress *= 10;
+                sysAddress += (byte)(_ram[address] - 0x30);
+                ++address;
             }
-            else
-            {
-                _ram[0xfffc] = 0xd;
-                _ram[0xfffd] = 0x8;
-            }
+            Debug.Log("Detected SYS address " + sysAddress);
+            _ram[0xfffc] = (byte)(sysAddress & 0xff);
+            _ram[0xfffd] = (byte)(sysAddress >> 8);
         }
+        else
+            Debug.Log("Failed to open boot file");
     }
 
     void Update()
@@ -167,8 +177,6 @@ public class Emulator : MonoBehaviour
         }
 
         _textureDirty = true;
-
-        //Debug.Log(_sid.samples.Count);
     }
 
     void OnAudioFilterRead(float[] data, int channels)
