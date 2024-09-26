@@ -83,7 +83,7 @@ public class Emulator : MonoBehaviour
         _ram.WriteIO(0xdd00, 0x3);
         _ram.WriteIO(0xd030, 0xff);
         _ram.WriteIO(0xd0bc, 0xff);
-        _ram.WriteIO(0xdc00, 0xff);
+        _ram.WriteIO(0xdc00, 0x7f);
     }
 
     void BootGame()

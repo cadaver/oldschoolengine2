@@ -644,7 +644,9 @@ namespace EMU6502
             }
 
             // HACK: if Kernal + Basic on, and code jumps to $a8bc, re-init SYS address from Basic program RAM beginning
-            if (_pc == 0xa8bc && (_ram.Read(0x1) & 0x3) == 0x3)
+            byte bankBits = (byte)(_ram.Read(0x1) & 0x3);
+
+            if (_pc == 0xa8bc && bankBits == 0x3)
             {
                 ushort address = 0x0801;
                 ushort sysAddress = 0;
@@ -667,21 +669,24 @@ namespace EMU6502
             _data = _ram.Read((ushort)(_pc + 1));
             _address = Combine(_data, _ram.Read((ushort)(_pc + 2)));
 
-            // HACK: emulate $ea81 interrupt termination if Kernal on
-            if (_pc == 0xea81 && (_ram.Read(0x1) & 0x3) == 0x2)
+            if (bankBits >= 0x2)
             {
-                _y = Pop();
-                _x = Pop();
-                _a = Pop();
-                _opcode = 0x40; // RTI
-            }
+                // HACK: emulate $ea81 interrupt termination if Kernal on
+                if (_pc == 0xea81)
+                {
+                    _y = Pop();
+                    _x = Pop();
+                    _a = Pop();
+                    _opcode = 0x40; // RTI
+                }
+                // Rest of Kernal emulation; simply return from unhandled routines
+                else if (_pc >= 0xe000)
+                {
+                    if (kernalTrap != null)
+                        kernalTrap(_pc);
 
-            // HACK: do not care of banking to simplify $01 handling for ingame IRQs
-            // There is no game code in $ff00 - $ffff region
-            if (_pc >= 0xff00 && kernalTrap != null)
-            {
-                kernalTrap(_pc);
-                _opcode = 0x60; // RTS, return from the Kernal routine
+                    _opcode = 0x60; // RTS, return from the Kernal routine
+                }
             }
             
             switch (_opcode)

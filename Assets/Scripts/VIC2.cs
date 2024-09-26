@@ -60,6 +60,7 @@ public class VIC2 {
 
     byte[] _lineChars = new byte[40];
     byte[] _lineColors = new byte[40];
+    byte[] _lineMask = new byte[320];
     int _lineNum;
     int _nextBadlineLineNum;
     int _currentCharRow;
@@ -164,6 +165,10 @@ public class VIC2 {
 
         bool renderSprites = true;
 
+        // Reset sprite mask for line
+        for (int i = 0; i < 320; ++i)
+            _lineMask[i] = 0;
+
         // V-border or display off
         if (!displayEnable || (vBorders && (_lineNum < 4 || _lineNum >= 196)))
         {
@@ -217,7 +222,10 @@ public class VIC2 {
                             }
                         }
                         else
+                        {
                             _pixels[pixelStart + i] = _palette[_lineColors[charIndex]];
+                            _lineMask[i] = 1;
+                        }
                     }
 
                     bit >>= 1;
@@ -268,9 +276,11 @@ public class VIC2 {
                                         break;
                                     case 2:
                                         _pixels[pixelStart + i] = mc2;
+                                        _lineMask[i] = 1;
                                         break;
                                     case 3:
                                         _pixels[pixelStart + i] = _palette[_lineColors[charIndex] & 0x7];
+                                        _lineMask[i] = 1;
                                         break;
                                 }
                             }
@@ -308,7 +318,10 @@ public class VIC2 {
                         else
                         {
                             if ((charByte & bit) != 0)
+                            {
                                 _pixels[pixelStart + i] = _palette[_lineChars[charIndex] >> 4];
+                                _lineMask[i] = 1;
+                            }
                             else
                                 _pixels[pixelStart + i] = _palette[_lineChars[charIndex] & 0xf];
                         }
@@ -350,9 +363,11 @@ public class VIC2 {
                                     break;
                                 case 2:
                                     _pixels[pixelStart + i] = _palette[_lineChars[charIndex] & 0xf];
+                                    _lineMask[i] = 1;
                                     break;
                                 case 3:
                                     _pixels[pixelStart + i] = _palette[_lineColors[charIndex] & 0xf];
+                                    _lineMask[i] = 1;
                                     break;
                             }
                         }
@@ -376,6 +391,8 @@ public class VIC2 {
         byte spriteMCFlags = _ram.ReadIO(0xd01c);
         byte spriteXMSBFlags = _ram.ReadIO(0xd010);
         byte spriteXExpandFlags = _ram.ReadIO(0xd01d);
+        byte spriteYExpandFlags = _ram.ReadIO(0xd017);
+        byte spritePriorityFlags = _ram.ReadIO(0xd01b);
 
         Color sprMc1 = _palette[_ram.ReadIO(0xd025) & 0xf];
         Color sprMc2 = _palette[_ram.ReadIO(0xd026) & 0xf];
@@ -388,13 +405,12 @@ public class VIC2 {
                 if (_lineNum == spriteY - 50 || (_lineNum == 0 && spriteY >= 30 && spriteY < 50))
                 {
                     _spriteActive[i] = true;
-                    _spriteRow[i] = (byte)(_lineNum + 50 - spriteY);
+                    _spriteRow[i] = (byte)((_lineNum + 50 - spriteY) * 2);
                 }
             }
 
             if (_spriteActive[i])
             {
-                // TODO: Y expansion, background priority
                 if (renderSprites)
                 {
                     int startX = _ram.ReadIO((ushort)(0xd000 + i * 2));
@@ -403,8 +419,9 @@ public class VIC2 {
                     bool xExpand = (spriteXExpandFlags & bitValues[i]) != 0;
                     if (xExpand && startX >= 480 && startX < 504)
                         startX -= 504;
+                    bool masked = (spritePriorityFlags & bitValues[i]) != 0;
 
-                    ushort spriteData = (ushort)(videoBank + _ram.ReadRAM((ushort)(screenAddress + 0x3f8 + i)) * 0x40 + _spriteRow[i] * 3);
+                    ushort spriteData = (ushort)(videoBank + _ram.ReadRAM((ushort)(screenAddress + 0x3f8 + i)) * 0x40 + (_spriteRow[i] >> 1) * 3);
                     Color spriteColor = _palette[_ram.ReadIO((ushort)(0xd027 + i)) & 0xf];
 
                     for (int j = 0; j < 24; ++j)
@@ -414,7 +431,7 @@ public class VIC2 {
 
                         for (int l = 0; l < (xExpand ? 2 : 1); ++l)
                         {
-                            if (k >= 0 && k <= 320 && (!hBorders || (k >= 7 && k < 311)) && spriteByte != 0)
+                            if (k >= 0 && k < 320 && (!hBorders || (k >= 7 && k < 311)) && spriteByte != 0 && (!masked || _lineMask[k] == 0))
                             {
                                 if ((spriteMCFlags & bitValues[i]) != 0)
                                 {
@@ -443,8 +460,8 @@ public class VIC2 {
                     }
                 }
 
-                ++_spriteRow[i];
-                if (_spriteRow[i] >= 21)
+                _spriteRow[i] += ((spriteYExpandFlags & bitValues[i]) != 0) ? (byte)1 : (byte)2;
+                if (_spriteRow[i] >= 42)
                     _spriteActive[i] = false;
             }
         }
